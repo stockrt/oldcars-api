@@ -106,12 +106,23 @@ func (h *GetCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Não busco por que estou com preguiça!")
 }
 
-type ListAllCarsCarHandler struct{}
+type ListAllCarsCarHandler struct {
+	repo *CarRepository
+}
 
 func (h *ListAllCarsCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	params := httptreemux.ContextParams(r.Context())
-	fmt.Fprintf(w, "Eu deveria busca um carro chamado: %s!", params["id"])
-	fmt.Fprintln(w, "Não busco por que estou com preguiça!")
+	cars, err := h.repo.ListAll()
+
+	if err != nil {
+		log.Println("Failed to fetch cars:", err)
+	}
+
+	fmt.Fprintln(w, "Lista de carros antigos:")
+
+	for _, car := range cars {
+		fmt.Fprintln(w, "- :", car)
+	}
+
 }
 
 func main() {
@@ -125,7 +136,7 @@ func main() {
 
 	addr := ":8080"
 	router := httptreemux.NewContextMux()
-	router.Handler(http.MethodGet, "/cars", &ListAllCarsCarHandler{})
+	router.Handler(http.MethodGet, "/cars", &ListAllCarsCarHandler{repository})
 	router.Handler(http.MethodGet, "/cars/:id", &GetCarHandler{})
 
 	log.Printf("Running web server on: http://%s\n", addr)
@@ -140,7 +151,7 @@ func main() {
 	if err == ErrDuplicatedCar {
 		log.Printf("%s is already created\n", car.Name)
 	} else if err != nil {
-		log.Println("Failed to create a car: ", err)
+		log.Println("Failed to create a car:", err)
 	}
 
 	// updating a car
@@ -148,7 +159,7 @@ func main() {
 	err = repository.Update(car)
 
 	if err != nil {
-		log.Println("Failed to update a car: ", err)
+		log.Println("Failed to update a car:", err)
 	}
 
 	repository.Create(&Car{Id: "124", Name: "Marcos"})
@@ -160,13 +171,13 @@ func main() {
 	err = repository.Remove("126")
 
 	if err != nil {
-		log.Println("Failed to remove a car: ", err)
+		log.Println("Failed to remove a car:", err)
 	}
 
 	// findAll
 	people, err := repository.FindAllActive()
 	if err != nil {
-		log.Println("Failed to fetch people: ", err)
+		log.Println("Failed to fetch people:", err)
 	}
 
 	for _, car := range people {
@@ -178,7 +189,7 @@ func main() {
 	if err == nil {
 		log.Printf("Result of findById: %v\n", car)
 	} else {
-		log.Println("Failed to findById ", err)
+		log.Println("Failed to findById", err)
 	}
 }
 */
