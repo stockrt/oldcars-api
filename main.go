@@ -112,7 +112,7 @@ func (h *CreateCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repository.Create(car)
+	err = h.repo.Create(car)
 
 	if err == ErrDuplicatedCar {
 		fmt.Fprintln(w, "Carro já existe na base:", car)
@@ -129,7 +129,7 @@ func (h *GetCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	params := httptreemux.ContextParams(r.Context())
 	fmt.Fprintf(w, "Buscando carro com ID: %s", params["id"])
 
-	cars, err := h.repo.FindById(params["id"])
+	car, err := h.repo.FindById(params["id"])
 
 	if err == nil {
 		fmt.Fprintln(w, "Carro:", car)
@@ -166,7 +166,7 @@ func main() {
 
 	repository := NewCarRepository(session)
 
-	addr := ":8080"
+	addr := "127.0.0.1:8080"
 	router := httptreemux.NewContextMux()
 	router.Handler(http.MethodGet, "/cars", &ListAllCarsCarHandler{repository})
 	router.Handler(http.MethodGet, "/cars/:id", &GetCarHandler{repository})
