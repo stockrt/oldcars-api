@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dimfeld/httptreemux"
+	"github.com/satori/go.uuid"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
@@ -112,6 +113,8 @@ func (h *CreateCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	car.Id = uuid.NewV4().String()
+
 	err = h.repo.Create(car)
 
 	if err == ErrDuplicatedCar {
@@ -138,6 +141,26 @@ func (h *GetCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type DeleteCarHandler struct {
+	repo *CarRepository
+}
+
+func (h *DeleteCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	params := httptreemux.ContextParams(r.Context())
+	fmt.Fprintf(w, "Vendi o carro com ID: %s", params["id"])
+
+	car, err := h.repo.FindById(params["id"])
+
+	if err != nil {
+		fmt.Fprintln(w, "Carro nao encontrado!")
+	} else {
+		err = h.repo.Remove(car.Id)
+		if err == nil {
+			fmt.Fprintln(w, "Carro removido!")
+		}
+	}
+}
+
 type ListAllCarsCarHandler struct {
 	repo *CarRepository
 }
@@ -152,7 +175,7 @@ func (h *ListAllCarsCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	fmt.Fprintln(w, "Lista de carros antigos:")
 
 	for _, car := range cars {
-		fmt.Fprintln(w, "- :", car)
+		fmt.Fprintf(w, "- %#v\n", car)
 	}
 
 }
@@ -171,38 +194,8 @@ func main() {
 	router.Handler(http.MethodGet, "/cars", &ListAllCarsCarHandler{repository})
 	router.Handler(http.MethodGet, "/cars/:id", &GetCarHandler{repository})
 	router.Handler(http.MethodPut, "/cars", &CreateCarHandler{repository})
+	router.Handler(http.MethodDelete, "/cars/:id", &DeleteCarHandler{repository})
 
 	log.Printf("Running web server on: http://%s\n", addr)
 	log.Fatal(http.ListenAndServe(addr, router))
 }
-
-/*
-	// updating a car
-	car.Name = "Juliana updated"
-	err = repository.Update(car)
-
-	if err != nil {
-		log.Println("Failed to update a car:", err)
-	}
-
-	repository.Create(&Car{Id: "124", Name: "Marcos"})
-	repository.Create(&Car{Id: "125", Name: "Kaio", Inative: false})
-	repository.Create(&Car{Id: "126", Name: "Gabriel"})
-	repository.Create(&Car{Id: "127", Name: "Maisa"})
-
-	// remove
-	err = repository.Remove("126")
-
-	if err != nil {
-		log.Println("Failed to remove a car:", err)
-	}
-
-	// FindById
-	car, err = repository.FindById("123")
-	if err == nil {
-		log.Printf("Result of findById: %v\n", car)
-	} else {
-		log.Println("Failed to findById", err)
-	}
-}
-*/
