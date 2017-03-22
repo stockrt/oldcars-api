@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/dimfeld/httptreemux"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
