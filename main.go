@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dimfeld/httptreemux"
@@ -98,12 +99,43 @@ func NewCarRepository(session *mgo.Session) *CarRepository {
 	return &CarRepository{session}
 }
 
-type GetCarHandler struct{}
+type CreateCarHandler struct {
+	repo *CarRepository
+}
+
+func (h *CreateCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	car := &Car{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(car)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = repository.Create(car)
+
+	if err == ErrDuplicatedCar {
+		fmt.Fprintln(w, "Carro já existe na base:", car)
+	} else if err != nil {
+		fmt.Fprintln(w, "Carro criado com sucesso:", car)
+	}
+}
+
+type GetCarHandler struct {
+	repo *CarRepository
+}
 
 func (h *GetCarHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	params := httptreemux.ContextParams(r.Context())
-	fmt.Fprintf(w, "Eu deveria busca um carro chamado: %s!", params["id"])
-	fmt.Fprintln(w, "Não busco por que estou com preguiça!")
+	fmt.Fprintf(w, "Buscando carro com ID: %s", params["id"])
+
+	cars, err := h.repo.FindById(params["id"])
+
+	if err == nil {
+		fmt.Fprintln(w, "Carro:", car)
+	} else {
+		fmt.Fprintln(w, "Carro nao encontrado!")
+	}
 }
 
 type ListAllCarsCarHandler struct {
@@ -137,23 +169,14 @@ func main() {
 	addr := ":8080"
 	router := httptreemux.NewContextMux()
 	router.Handler(http.MethodGet, "/cars", &ListAllCarsCarHandler{repository})
-	router.Handler(http.MethodGet, "/cars/:id", &GetCarHandler{})
+	router.Handler(http.MethodGet, "/cars/:id", &GetCarHandler{repository})
+	router.Handler(http.MethodPut, "/cars", &CreateCarHandler{repository})
 
 	log.Printf("Running web server on: http://%s\n", addr)
 	log.Fatal(http.ListenAndServe(addr, router))
 }
 
 /*
-	// creating a car
-	car := &Car{Id: "130", Name: "Juliana"}
-	err = repository.Create(car)
-
-	if err == ErrDuplicatedCar {
-		log.Printf("%s is already created\n", car.Name)
-	} else if err != nil {
-		log.Println("Failed to create a car:", err)
-	}
-
 	// updating a car
 	car.Name = "Juliana updated"
 	err = repository.Update(car)
@@ -172,16 +195,6 @@ func main() {
 
 	if err != nil {
 		log.Println("Failed to remove a car:", err)
-	}
-
-	// findAll
-	people, err := repository.FindAllActive()
-	if err != nil {
-		log.Println("Failed to fetch people:", err)
-	}
-
-	for _, car := range people {
-		log.Printf("Have in database: %#v\n", car)
 	}
 
 	// FindById
