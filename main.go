@@ -2,12 +2,11 @@ package main
 
 import (
 	"errors"
-	"log"
+	"github.com/dimfeld/httptreemux"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"net/http"
-	"github.com/dimfeld/httptreemux"
 )
 
 const CarCollection = "car"
@@ -15,10 +14,10 @@ const CarCollection = "car"
 var ErrDuplicatedCar = errors.New("Duplicated car")
 
 type Car struct {
-	Id      string `bson:"_id"`
-	Make    string `bson:"make"`
-	Model   string `bson:"model"`
-	Year    int    `bson:"year"`
+	Id    string `bson:"_id"`
+	Make  string `bson:"make"`
+	Model string `bson:"model"`
+	Year  int    `bson:"year"`
 }
 
 type CarRepository struct {
@@ -73,7 +72,7 @@ func (r *CarRepository) FindByYear() ([]*Car, error) {
 	defer session.Close()
 
 	collection := session.DB("").C(CarCollection)
-    query := bson.M{"year": bson.M{"$gte": 1900}}
+	query := bson.M{"year": bson.M{"$gte": 1900}}
 
 	documents := make([]*Car, 0)
 
@@ -122,7 +121,6 @@ func main() {
 	}
 
 	repository := NewCarRepository(session)
-
 
 	addr := ":8080"
 	router := httptreemux.NewContextMux()
